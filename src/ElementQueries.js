@@ -10,8 +10,8 @@
     } else if (typeof exports === 'object') {
         module.exports = factory();
     } else {
-        root.ElementQueries = factory();
-        root.ElementQueries.listen();
+        root.meq = factory();
+        root.meq.listen();
     }
 }(typeof window !== 'undefined' ? window : this, function () {
 
@@ -20,7 +20,8 @@
      * @type {Function}
      * @constructor
      */
-    const ElementQueries = function() {
+    const channels = {};
+    const meq = function() {
         /**
          *
          * @param element
@@ -79,6 +80,7 @@
          * @param {HTMLElement} element
          * @constructor
          */
+
         function SetupInformation(element) {
             this.element = element;
             this.options = {};
@@ -87,30 +89,42 @@
              * @param {Object} option {mode: 'min|max', property: 'width|height', value: '123px'}
              */
             this.addOption = function(option) {
-                const idx = [option.mode, option.property, option.value].join(',');
+                const idx = option.idx;
+                if (this.options.hasOwnProperty(idx))
+                    return false;
+
+                const channelName = option.channelName;
                 this.options[idx] = option;
+                if (!channels.hasOwnProperty(channelName))
+                    channels[channelName] = [];
+                const channel = channels[channelName];
+                if (channel.indexOf(this.element) === -1)
+                    channel.push(this.element);
+                return true;
             };
 
-            const attributes = ['min-width', 'min-height', 'max-width', 'max-height'];
 
             /**
              * Extracts the computed width/height and sets to min/max- attribute.
              */
             this.call = function() {
                 // extract current dimensions
-                const width = this.element.offsetWidth;
-                const height = this.element.offsetHeight;
+                const width = this.element.hasAttribute('meq-quick-width')
+                    ? this.element.getAttribute('meq-quick-width')
+                    : this.element.offsetWidth;
+                const height = this.element.hasAttribute('meq-quick-height')
+                    ? this.element.getAttribute('meq-quick-height')
+                    : this.element.offsetHeight;
+
                 const attrValues = {};
 
-                for (const key in this.options) {
-                    if (!this.options.hasOwnProperty(key)){
-                        continue;
-                    }
-                    const option = this.options[key];
+                for (const optionKey in this.options) if (this.options.hasOwnProperty(optionKey)) {
+                    const option = this.options[optionKey];
+                    const channelName = option.channelName;
                     const value = convertToPx(this.element, option.value);
 
                     const actualValue = option.property === 'width' ? width : height;
-                    const attrName = option.mode + '-' + option.property;
+                    const attrName = channelName + '-meq-' + option.mode + '-' + option.property;
                     let attrValue = '';
 
                     if (option.mode === 'min' && actualValue >= value) {
@@ -121,20 +135,29 @@
                         attrValue += option.value;
                     }
 
-                    if (!attrValues[attrName]) attrValues[attrName] = '';
-                    if (attrValue && -1 === (' '+attrValues[attrName]+' ').indexOf(' ' + attrValue + ' ')) {
-                        attrValues[attrName] += ' ' + attrValue;
+                    if (!attrValues.hasOwnProperty(attrName)) {
+                        attrValues[attrName] = '';
+                    }
+
+                    const attrValueNotEmpty = attrValue.length !== -1;
+                    const attrValueNotIncluded = (' ' + attrValues[attrName] + ' ').indexOf(' ' + attrValue + ' ') === -1;
+                    if (attrValueNotEmpty && attrValueNotIncluded) {
+                        attrValues[attrName] += ' ' + attrValue + ' ';
                     }
                 }
 
-                for (const k in attributes) {
-                    if(!attributes.hasOwnProperty(k)) continue;
-
-                    if (attrValues[attributes[k]]) {
-                        this.element.setAttribute(attributes[k], attrValues[attributes[k]].substr(1));
-                    } else {
-                        this.element.removeAttribute(attributes[k]);
+                for (const optionKey in this.options) if (this.options.hasOwnProperty(optionKey)) {
+                    const option = this.options[optionKey];
+                    const optAttrs = option.optAttrs;
+                    for (let attrIndex = 0; attrIndex !== optAttrs.length; attrIndex++) {
+                        const attrName = optAttrs[attrIndex];
+                        this.element.removeAttribute(attrName);
                     }
+                }
+
+                for (const attrName in attrValues) if (attrValues.hasOwnProperty(attrName)) {
+                    const attrValue = attrValues[attrName];
+                    this.element.setAttribute(attrName, attrValue);
                 }
             };
         }
@@ -145,16 +168,13 @@
          */
         function setupElement(element, options) {
             if (element.elementQueriesSetupInformation) {
-                element.elementQueriesSetupInformation.addOption(options);
+                if (element.elementQueriesSetupInformation.addOption(options))
+                    element.elementQueriesSetupInformation.call();
             } else {
                 element.elementQueriesSetupInformation = new SetupInformation(element);
-                element.elementQueriesSetupInformation.addOption(options);
-                // TODO
-                // element.elementQueriesSensor = new ResizeSensor(element, function() {
-                // element.elementQueriesSetupInformation.call();
-                // });
+                if (element.elementQueriesSetupInformation.addOption(options))
+                    element.elementQueriesSetupInformation.call();
             }
-            element.elementQueriesSetupInformation.call();
         }
 
         /**
@@ -164,11 +184,12 @@
          * @param {String} value
          */
         const allQueries = {};
-        function queueQuery(selector, mode, property, value) {
-            if (typeof(allQueries[mode]) === 'undefined') allQueries[mode] = {};
-            if (typeof(allQueries[mode][property]) === 'undefined') allQueries[mode][property] = {};
-            if (typeof(allQueries[mode][property][value]) === 'undefined') allQueries[mode][property][value] = selector;
-            else allQueries[mode][property][value] += ','+selector;
+        function queueQuery(selector, channelName, mode, property, value) {
+            if (typeof(allQueries[channelName]) === 'undefined') allQueries[channelName] = {};
+            if (typeof(allQueries[channelName][mode]) === 'undefined') allQueries[channelName][mode] = {};
+            if (typeof(allQueries[channelName][mode][property]) === 'undefined') allQueries[channelName][mode][property] = {};
+            if (typeof(allQueries[channelName][mode][property][value]) === 'undefined') allQueries[channelName][mode][property][value] = selector;
+            else allQueries[channelName][mode][property][value] += ','+selector;
         }
 
         function getQuery() {
@@ -189,40 +210,46 @@
          */
         function findElementQueriesElements() {
             const query = getQuery();
-
-            for (const mode in allQueries) if (allQueries.hasOwnProperty(mode)) {
-
-                for (const property in allQueries[mode]) if (allQueries[mode].hasOwnProperty(property)) {
-                    for (const value in allQueries[mode][property]) if (allQueries[mode][property].hasOwnProperty(value)) {
-                        const elements = query(allQueries[mode][property][value]);
-                        for (let i = 0, j = elements.length; i < j; i++) {
-                            setupElement(elements[i], {
-                                mode: mode,
-                                property: property,
-                                value: value
-                            });
+            const baseAttrs = ['meq-min-width', 'meq-min-height', 'meq-max-width', 'meq-max-height'];
+            for (const channelName in allQueries) if (allQueries.hasOwnProperty(channelName)) {
+                const optAttrs = baseAttrs.map(attrName => channelName + '-' + attrName);
+                for (const mode in allQueries[channelName]) if (allQueries[channelName].hasOwnProperty(mode)) {
+                    for (const property in allQueries[channelName][mode]) if (allQueries[channelName][mode].hasOwnProperty(property)) {
+                        for (const value in allQueries[channelName][mode][property]) if (allQueries[channelName][mode][property].hasOwnProperty(value)) {
+                            const elements = query(allQueries[channelName][mode][property][value]);
+                            const idx = channelName + mode + property + value;
+                            const option = {
+                                idx,
+                                mode,
+                                value,
+                                property,
+                                optAttrs,
+                                channelName
+                            };
+                            for (let i = 0, j = elements.length; i < j; i++) {
+                                setupElement(elements[i], option);
+                            }
                         }
                     }
                 }
-
             }
         }
 
-        const regex = /,?[\s\t]*([^,\n]*?)((?:\[[\s\t]*?(?:min|max)-(?:width|height)[\s\t]*?[~$^]?=[\s\t]*?"[^"]*?"[\s\t]*?])+)([^,\n\s{]*)/mgi;
-        const attrRegex = /\[[\s\t]*?(min|max)-(width|height)[\s\t]*?[~$^]?=[\s\t]*?"([^"]*?)"[\s\t]*?]/mgi;
+        const regex = /,?[\s\t]*([^,\n]*?)((?:\[[\s\t]*?(?:[\w-]+)-meq-(?:min|max)-(?:width|height)[\s\t]*?[~$^]?=[\s\t]*?"[^"]*?"[\s\t]*?])+)([^,\n\s{]*)/mgi;
+        const attrRegex = /\[[\s\t]*?([\w-]+)-meq-(min|max)-(width|height)[\s\t]*?[~$^]?=[\s\t]*?"([^"]*?)"[\s\t]*?]/mgi;
         /**
          * @param {String} css
          */
         function extractQuery(css) {
-            let match;
             css = css.replace(/'/g, '"');
+            let match;
             while (null !== (match = regex.exec(css))) {
                 const smatch = match[1] + match[3];
                 const attrs = match[2];
                 let attrMatch;
 
                 while (null !== (attrMatch = attrRegex.exec(attrs))) {
-                    queueQuery(smatch, attrMatch[1], attrMatch[2], attrMatch[3]);
+                    queueQuery(smatch, attrMatch[1], attrMatch[2], attrMatch[3], attrMatch[4]);
                 }
             }
         }
@@ -236,16 +263,16 @@
             }
             if ('string' === typeof rules) {
                 rules = rules.toLowerCase();
-                if (-1 !== rules.indexOf('min-width') || -1 !== rules.indexOf('max-width')) {
+                if (-1 !== rules.indexOf('meq-min-width') || -1 !== rules.indexOf('meq-max-width')) {
                     extractQuery(rules);
                 }
             } else {
                 for (let i = 0, j = rules.length; i < j; i++) {
                     if (1 === rules[i].type) {
                         const selector = rules[i].selectorText || rules[i].cssText;
-                        if (-1 !== selector.indexOf('min-height') || -1 !== selector.indexOf('max-height')) {
+                        if (-1 !== selector.indexOf('meq-min-height') || -1 !== selector.indexOf('meq-max-height')) {
                             extractQuery(selector);
-                        }else if(-1 !== selector.indexOf('min-width') || -1 !== selector.indexOf('max-width')) {
+                        }else if(-1 !== selector.indexOf('meq-min-width') || -1 !== selector.indexOf('meq-max-width')) {
                             extractQuery(selector);
                         }
                     } else if (4 === rules[i].type) {
@@ -277,19 +304,53 @@
         this.update = function() {
             this.init();
         };
+
+        this.findElements = function() {
+            findElementQueriesElements();
+        };
     };
 
-    ElementQueries.update = function() {
-        ElementQueries.instance.update();
+    meq.update = function() {
+        meq.instance.update();
     };
 
-    ElementQueries.init = function() {
-        if (!ElementQueries.instance) {
-            ElementQueries.instance = new ElementQueries();
+    meq.init = function() {
+        if (!meq.instance) {
+            meq.instance = new meq();
         }
 
-        ElementQueries.instance.init();
+        meq.instance.init();
     };
+
+    meq.findElements = function() {
+        meq.instance.findElements();
+    };
+
+    meq.recalc = function(channelName) {
+        if (channelName instanceof window.Element)
+            return meq.recalcByElm(channelName);
+
+        const channelArr = channelName && channelName.length !== 0
+            ? [ channels[channelName] ]
+            : Object.keys(channels).map(key => channels[key]);
+
+        channelArr.forEach(channel => {
+            if (channel) {
+                for (let elmIndex = 0; elmIndex !== channel.length; elmIndex++) {
+                    const elm = channel[elmIndex];
+                    if (elm.elementQueriesSetupInformation)
+                        elm.elementQueriesSetupInformation.call();
+                }
+            }
+        });
+    };
+
+    meq.recalcByElm = function(elm) {
+        if (elm.elementQueriesSetupInformation)
+            elm.elementQueriesSetupInformation.call();
+    };
+
+    meq.channels = channels;
 
     const domLoaded = function (callback) {
         /* Internet Explorer */
@@ -319,10 +380,10 @@
         else window.onload = callback;
     };
 
-    ElementQueries.listen = function() {
-        domLoaded(ElementQueries.init);
+    meq.listen = function() {
+        domLoaded(meq.init);
     };
 
-    return ElementQueries;
+    return meq;
 
 }));
