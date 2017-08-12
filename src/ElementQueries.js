@@ -3,11 +3,11 @@
  * directory of this distribution and at
  * https://github.com/marcj/css-element-queries/blob/master/LICENSE.
  */
-;
+
 (function (root, factory) {
-    if (typeof define === "function" && define.amd) {
+    if (typeof define === 'function' && define.amd) {
         define([], factory);
-    } else if (typeof exports === "object") {
+    } else if (typeof exports === 'object') {
         module.exports = factory();
     } else {
         root.ElementQueries = factory();
@@ -20,7 +20,7 @@
      * @type {Function}
      * @constructor
      */
-    var ElementQueries = function() {
+    const ElementQueries = function() {
         /**
          *
          * @param element
@@ -30,7 +30,7 @@
             if (!element) {
                 element = document.documentElement;
             }
-            var fontSize = window.getComputedStyle(element, null).fontSize;
+            const fontSize = window.getComputedStyle(element, null).fontSize;
             return parseFloat(fontSize) || 16;
         }
 
@@ -43,31 +43,32 @@
          * @returns {*}
          */
         function convertToPx(element, value) {
-            var numbers = value.split(/\d/);
-            var units = numbers[numbers.length-1];
+            const numbers = value.split(/\d/);
+            const units = numbers[numbers.length-1];
             value = parseFloat(value);
             switch (units) {
-                case "px":
-                    return value;
-                case "em":
-                    return value * getEmSize(element);
-                case "rem":
-                    return value * getEmSize();
+            case 'px':
+                return value;
+            case 'em':
+                return value * getEmSize(element);
+            case 'rem':
+                return value * getEmSize();
                 // Viewport units!
                 // According to http://quirksmode.org/mobile/tableViewport.html
                 // documentElement.clientWidth/Height gets us the most reliable info
-                case "vw":
-                    return value * document.documentElement.clientWidth / 100;
-                case "vh":
-                    return value * document.documentElement.clientHeight / 100;
-                case "vmin":
-                case "vmax":
-                    var vw = document.documentElement.clientWidth / 100;
-                    var vh = document.documentElement.clientHeight / 100;
-                    var chooser = Math[units === "vmin" ? "min" : "max"];
-                    return value * chooser(vw, vh);
-                default:
-                    return value;
+            case 'vw':
+                return value * document.documentElement.clientWidth / 100;
+            case 'vh':
+                return value * document.documentElement.clientHeight / 100;
+            case 'vmin':
+            case 'vmax': {
+                const vw = document.documentElement.clientWidth / 100;
+                const vh = document.documentElement.clientHeight / 100;
+                const chooser = Math[units === 'vmin' ? 'min' : 'max'];
+                return value * chooser(vw, vh);
+            }
+            default:
+                return value;
                 // for now, not supporting physical units (since they are just a set number of px)
                 // or ex/ch (getting accurate measurements is hard)
             }
@@ -81,45 +82,42 @@
         function SetupInformation(element) {
             this.element = element;
             this.options = {};
-            var key, option, width = 0, height = 0, value, actualValue, attrValues, attrValue, attrName;
 
             /**
              * @param {Object} option {mode: 'min|max', property: 'width|height', value: '123px'}
              */
             this.addOption = function(option) {
-                var idx = [option.mode, option.property, option.value].join(',');
+                const idx = [option.mode, option.property, option.value].join(',');
                 this.options[idx] = option;
             };
 
-            var attributes = ['min-width', 'min-height', 'max-width', 'max-height'];
+            const attributes = ['min-width', 'min-height', 'max-width', 'max-height'];
 
             /**
              * Extracts the computed width/height and sets to min/max- attribute.
              */
             this.call = function() {
                 // extract current dimensions
-                width = this.element.offsetWidth;
-                height = this.element.offsetHeight;
+                const width = this.element.offsetWidth;
+                const height = this.element.offsetHeight;
+                const attrValues = {};
 
-                attrValues = {};
-
-                for (key in this.options) {
+                for (const key in this.options) {
                     if (!this.options.hasOwnProperty(key)){
                         continue;
                     }
-                    option = this.options[key];
+                    const option = this.options[key];
+                    const value = convertToPx(this.element, option.value);
 
-                    value = convertToPx(this.element, option.value);
+                    const actualValue = option.property === 'width' ? width : height;
+                    const attrName = option.mode + '-' + option.property;
+                    let attrValue = '';
 
-                    actualValue = option.property == 'width' ? width : height;
-                    attrName = option.mode + '-' + option.property;
-                    attrValue = '';
-
-                    if (option.mode == 'min' && actualValue >= value) {
+                    if (option.mode === 'min' && actualValue >= value) {
                         attrValue += option.value;
                     }
 
-                    if (option.mode == 'max' && actualValue <= value) {
+                    if (option.mode === 'max' && actualValue <= value) {
                         attrValue += option.value;
                     }
 
@@ -129,7 +127,7 @@
                     }
                 }
 
-                for (var k in attributes) {
+                for (const k in attributes) {
                     if(!attributes.hasOwnProperty(k)) continue;
 
                     if (attrValues[attributes[k]]) {
@@ -153,7 +151,7 @@
                 element.elementQueriesSetupInformation.addOption(options);
                 // TODO
                 // element.elementQueriesSensor = new ResizeSensor(element, function() {
-                    // element.elementQueriesSetupInformation.call();
+                // element.elementQueriesSetupInformation.call();
                 // });
             }
             element.elementQueriesSetupInformation.call();
@@ -165,19 +163,19 @@
          * @param {String} property width|height
          * @param {String} value
          */
-        var allQueries = {};
+        const allQueries = {};
         function queueQuery(selector, mode, property, value) {
-            if (typeof(allQueries[mode]) == 'undefined') allQueries[mode] = {};
-            if (typeof(allQueries[mode][property]) == 'undefined') allQueries[mode][property] = {};
-            if (typeof(allQueries[mode][property][value]) == 'undefined') allQueries[mode][property][value] = selector;
+            if (typeof(allQueries[mode]) === 'undefined') allQueries[mode] = {};
+            if (typeof(allQueries[mode][property]) === 'undefined') allQueries[mode][property] = {};
+            if (typeof(allQueries[mode][property][value]) === 'undefined') allQueries[mode][property][value] = selector;
             else allQueries[mode][property][value] += ','+selector;
         }
 
         function getQuery() {
-            var query;
+            let query;
             if (document.querySelectorAll) query = document.querySelectorAll.bind(document);
-            if (!query && 'undefined' !== typeof $$) query = $$;
-            if (!query && 'undefined' !== typeof jQuery) query = jQuery;
+            if (!query && 'undefined' !== typeof window.$$) query = window.$$;
+            if (!query && 'undefined' !== typeof window.jQuery) query = window.jQuery;
 
             if (!query) {
                 throw 'No document.querySelectorAll, jQuery or Mootools\'s $$ found.';
@@ -190,14 +188,14 @@
          * Start the magic. Go through all collected rules (readRules()) and attach the resize-listener.
          */
         function findElementQueriesElements() {
-            var query = getQuery();
+            const query = getQuery();
 
-            for (var mode in allQueries) if (allQueries.hasOwnProperty(mode)) {
+            for (const mode in allQueries) if (allQueries.hasOwnProperty(mode)) {
 
-                for (var property in allQueries[mode]) if (allQueries[mode].hasOwnProperty(property)) {
-                    for (var value in allQueries[mode][property]) if (allQueries[mode][property].hasOwnProperty(value)) {
-                        var elements = query(allQueries[mode][property][value]);
-                        for (var i = 0, j = elements.length; i < j; i++) {
+                for (const property in allQueries[mode]) if (allQueries[mode].hasOwnProperty(property)) {
+                    for (const value in allQueries[mode][property]) if (allQueries[mode][property].hasOwnProperty(value)) {
+                        const elements = query(allQueries[mode][property][value]);
+                        for (let i = 0, j = elements.length; i < j; i++) {
                             setupElement(elements[i], {
                                 mode: mode,
                                 property: property,
@@ -210,18 +208,18 @@
             }
         }
 
-        var regex = /,?[\s\t]*([^,\n]*?)((?:\[[\s\t]*?(?:min|max)-(?:width|height)[\s\t]*?[~$\^]?=[\s\t]*?"[^"]*?"[\s\t]*?])+)([^,\n\s\{]*)/mgi;
-        var attrRegex = /\[[\s\t]*?(min|max)-(width|height)[\s\t]*?[~$\^]?=[\s\t]*?"([^"]*?)"[\s\t]*?]/mgi;
+        const regex = /,?[\s\t]*([^,\n]*?)((?:\[[\s\t]*?(?:min|max)-(?:width|height)[\s\t]*?[~$^]?=[\s\t]*?"[^"]*?"[\s\t]*?])+)([^,\n\s{]*)/mgi;
+        const attrRegex = /\[[\s\t]*?(min|max)-(width|height)[\s\t]*?[~$^]?=[\s\t]*?"([^"]*?)"[\s\t]*?]/mgi;
         /**
          * @param {String} css
          */
         function extractQuery(css) {
-            var match;
-            var smatch;
+            let match;
             css = css.replace(/'/g, '"');
             while (null !== (match = regex.exec(css))) {
-                smatch = match[1] + match[3];
-                attrs = match[2];
+                const smatch = match[1] + match[3];
+                const attrs = match[2];
+                let attrMatch;
 
                 while (null !== (attrMatch = attrRegex.exec(attrs))) {
                     queueQuery(smatch, attrMatch[1], attrMatch[2], attrMatch[3]);
@@ -233,7 +231,6 @@
          * @param {CssRule[]|String} rules
          */
         function readRules(rules) {
-            var selector = '';
             if (!rules) {
                 return;
             }
@@ -243,9 +240,9 @@
                     extractQuery(rules);
                 }
             } else {
-                for (var i = 0, j = rules.length; i < j; i++) {
+                for (let i = 0, j = rules.length; i < j; i++) {
                     if (1 === rules[i].type) {
-                        selector = rules[i].selectorText || rules[i].cssText;
+                        const selector = rules[i].selectorText || rules[i].cssText;
                         if (-1 !== selector.indexOf('min-height') || -1 !== selector.indexOf('max-height')) {
                             extractQuery(selector);
                         }else if(-1 !== selector.indexOf('min-width') || -1 !== selector.indexOf('max-width')) {
@@ -264,7 +261,7 @@
          * Searches all css rules and setups the event listener to all elements with element query rules..
          */
         this.init = function() {
-            for (var i = 0, j = document.styleSheets.length; i < j; i++) {
+            for (let i = 0, j = document.styleSheets.length; i < j; i++) {
                 try {
                     readRules(document.styleSheets[i].cssRules || document.styleSheets[i].rules || document.styleSheets[i].cssText);
                 } catch(e) {
@@ -294,13 +291,13 @@
         ElementQueries.instance.init();
     };
 
-    var domLoaded = function (callback) {
+    const domLoaded = function (callback) {
         /* Internet Explorer */
         /*@cc_on
          @if (@_win32 || @_win64)
          document.write('<script id="ieScriptLoad" defer src="//:"><\/script>');
          document.getElementById('ieScriptLoad').onreadystatechange = function() {
-         if (this.readyState == 'complete') {
+         if (this.readyState === 'complete') {
          callback();
          }
          };
@@ -310,8 +307,8 @@
             document.addEventListener('DOMContentLoaded', callback, false);
         }
         /* Safari, iCab, Konqueror */
-        else if (/KHTML|WebKit|iCab/i.test(navigator.userAgent)) {
-            var DOMLoadTimer = setInterval(function () {
+        else if (/KHTML|WebKit|iCab/i.test(window.navigator.userAgent)) {
+            const DOMLoadTimer = setInterval(function () {
                 if (/loaded|complete/i.test(document.readyState)) {
                     callback();
                     clearInterval(DOMLoadTimer);
