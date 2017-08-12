@@ -6,14 +6,14 @@
 ;
 (function (root, factory) {
     if (typeof define === "function" && define.amd) {
-        define(['./ResizeSensor.js'], factory);
+        define([], factory);
     } else if (typeof exports === "object") {
-        module.exports = factory(require('./ResizeSensor.js'));
+        module.exports = factory();
     } else {
-        root.ElementQueries = factory(root.ResizeSensor);
+        root.ElementQueries = factory();
         root.ElementQueries.listen();
     }
-}(typeof window !== 'undefined' ? window : this, function (ResizeSensor) {
+}(typeof window !== 'undefined' ? window : this, function () {
 
     /**
      *
@@ -155,9 +155,10 @@
             } else {
                 element.elementQueriesSetupInformation = new SetupInformation(element);
                 element.elementQueriesSetupInformation.addOption(options);
-                element.elementQueriesSensor = new ResizeSensor(element, function() {
-                    element.elementQueriesSetupInformation.call();
-                });
+                // TODO
+                // element.elementQueriesSensor = new ResizeSensor(element, function() {
+                    // element.elementQueriesSetupInformation.call();
+                // });
             }
             element.elementQueriesSetupInformation.call();
 
@@ -217,113 +218,6 @@
             }
         }
 
-        /**
-         *
-         * @param {HTMLElement} element
-         */
-        function attachResponsiveImage(element) {
-            var children = [];
-            var rules = [];
-            var sources = [];
-            var defaultImageId = 0;
-            var lastActiveImage = -1;
-            var loadedImages = [];
-
-            for (var i in element.children) {
-                if(!element.children.hasOwnProperty(i)) continue;
-
-                if (element.children[i].tagName && element.children[i].tagName.toLowerCase() === 'img') {
-                    children.push(element.children[i]);
-
-                    var minWidth = element.children[i].getAttribute('min-width') || element.children[i].getAttribute('data-min-width');
-                    //var minHeight = element.children[i].getAttribute('min-height') || element.children[i].getAttribute('data-min-height');
-                    var src = element.children[i].getAttribute('data-src') || element.children[i].getAttribute('url');
-
-                    sources.push(src);
-
-                    var rule = {
-                        minWidth: minWidth
-                    };
-
-                    rules.push(rule);
-
-                    if (!minWidth) {
-                        defaultImageId = children.length - 1;
-                        element.children[i].style.display = 'block';
-                    } else {
-                        element.children[i].style.display = 'none';
-                    }
-                }
-            }
-
-            lastActiveImage = defaultImageId;
-
-            function check() {
-                var imageToDisplay = false, i;
-
-                for (i in children){
-                    if(!children.hasOwnProperty(i)) continue;
-
-                    if (rules[i].minWidth) {
-                        if (element.offsetWidth > rules[i].minWidth) {
-                            imageToDisplay = i;
-                        }
-                    }
-                }
-
-                if (!imageToDisplay) {
-                    //no rule matched, show default
-                    imageToDisplay = defaultImageId;
-                }
-
-                if (lastActiveImage != imageToDisplay) {
-                    //image change
-
-                    if (!loadedImages[imageToDisplay]){
-                        //image has not been loaded yet, we need to load the image first in memory to prevent flash of
-                        //no content
-
-                        var image = new Image();
-                        image.onload = function() {
-                            children[imageToDisplay].src = sources[imageToDisplay];
-
-                            children[lastActiveImage].style.display = 'none';
-                            children[imageToDisplay].style.display = 'block';
-
-                            loadedImages[imageToDisplay] = true;
-
-                            lastActiveImage = imageToDisplay;
-                        };
-
-                        image.src = sources[imageToDisplay];
-                    } else {
-                        children[lastActiveImage].style.display = 'none';
-                        children[imageToDisplay].style.display = 'block';
-                        lastActiveImage = imageToDisplay;
-                    }
-                } else {
-                    //make sure for initial check call the .src is set correctly
-                    children[imageToDisplay].src = sources[imageToDisplay];
-                }
-            }
-
-            element.resizeSensor = new ResizeSensor(element, check);
-            check();
-
-            if (trackingActive) {
-                elements.push(element);
-            }
-        }
-
-        function findResponsiveImages(){
-            var query = getQuery();
-
-            var elements = query('[data-responsive-image],[responsive-image]');
-            for (var i = 0, j = elements.length; i < j; i++) {
-                attachResponsiveImage(elements[i]);
-            }
-        }
-
         var regex = /,?[\s\t]*([^,\n]*?)((?:\[[\s\t]*?(?:min|max)-(?:width|height)[\s\t]*?[~$\^]?=[\s\t]*?"[^"]*?"[\s\t]*?])+)([^,\n\s\{]*)/mgi;
         var attrRegex = /\[[\s\t]*?(min|max)-(width|height)[\s\t]*?[~$\^]?=[\s\t]*?"([^"]*?)"[\s\t]*?]/mgi;
         /**
@@ -374,8 +268,6 @@
             }
         }
 
-        var defaultCssInjected = false;
-
         /**
          * Searches all css rules and setups the event listener to all elements with element query rules..
          *
@@ -395,16 +287,7 @@
                 }
             }
 
-            if (!defaultCssInjected) {
-                var style = document.createElement('style');
-                style.type = 'text/css';
-                style.innerHTML = '[responsive-image] > img, [data-responsive-image] {overflow: hidden; padding: 0; } [responsive-image] > img, [data-responsive-image] > img { width: 100%;}';
-                document.getElementsByTagName('head')[0].appendChild(style);
-                defaultCssInjected = true;
-            }
-
             findElementQueriesElements();
-            findResponsiveImages();
         };
 
         /**
