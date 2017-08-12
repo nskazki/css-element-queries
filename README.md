@@ -1,110 +1,104 @@
-# CSS Element Queries
+# Manual Element Queries
 
+Like [css-element-queries](https://github.com/marcj/css-element-queries), but require manual recalculation trigger.
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/marcj/css-element-queries?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+It can be useful when you already have 1000+ elements and don't want to have an extra 1000+ [ResizeSensors](https://github.com/tokmak/css-element-queries/blob/master/src/ResizeSensor.js).
 
-Element Queries is a polyfill adding support for element based media-queries to all new browsers (incl. IE7+).
-It allows not only to define media-queries based on window-size but also adds 'media-queries' functionality depending on element (any selector supported)
-size while not causing performance lags due to event based implementation.
+## Example
 
-It's a proof-of-concept event-based CSS element dimension query with valid CSS selector syntax.
+[Live Demo](https://jsfiddle.net/pcoo54e5/31/)
 
-Features:
+```html
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+<body>
+<body>
+  <p class="block-type1"><span class="desc">Block A with channel-id-1</span></p>
+  <p class="block-type1"><span class="desc">Block B with channel-id-1</span></p>
 
- - no performance issues since it listens only on size changes of elements that have element query rules defined through css. Other element query polifills only listen on `window.onresize` which causes performance issues and allows only to detect changes via window.resize event and not inside layout changes like css3 animation, :hover, DOM changes etc.
- - no interval/timeout detection. Truly event-based through integrated ResizeSensor class.
- - no CSS modifications. Valid CSS Syntax
- - all CSS selectors available. Uses regular attribute selector. No need to write rules in HTML.
- - supports and tested in webkit, gecko and IE(7/8/9/10/11)
- - `min-width`, `min-height`, `max-width` and `max-height` are supported so far
- - works with any layout modifications: HTML (innerHTML etc), inline styles, DOM mutation, CSS3 transitions, fluid layout changes (also percent changes), pseudo classes (:hover etc.), window resizes and more
- - no Javascript-Framework dependency (works with jQuery, Mootools, etc.)
- - Works beautiful for responsive images without FOUC
+  <hr>
 
-More demos and information: http://marcj.github.io/css-element-queries/
-
-## Examples
-
-### Element Query
+  <p class="block-type2"><span class="desc">Block C with channel-id-2</span></p>
+  <p class="block-type2"><span class="desc">Block D with channel-id-2</span></p>
+</body>
+</body>
+</body>
+</html>
+```
 
 ```css
-.widget-name h2 {
-    font-size: 12px;
+.block-type1,
+.block-type2 {
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  background: white;
 }
 
-.widget-name[min-width~="400px"] h2 {
-    font-size: 18px;
+/* block-type1 */
+.block-type1[channel-id-1-meq-min-width~="201px"] {
+  padding: 50px;
+}
+.block-type1[channel-id-1-meq-min-width~="201px"] .desc {
+  background: orange;
 }
 
-.widget-name[min-width~="600px"] h2 {
-    padding: 55px;
-    text-align: center;
-    font-size: 24px;
+.block-type1[channel-id-1-meq-min-width~="101px"][channel-id-1-meq-max-width~="200px"] {
+  background: red;
 }
 
-.widget-name[min-width~="700px"] h2 {
-    font-size: 34px;
-    color: red;
+.block-type1[channel-id-1-meq-max-width~="100px"] {
+  font-size: 12px;
+}
+
+/* block-type2 */
+.block-type2[channel-id-2-meq-min-height~="71px"] {
+  padding: 50px;
+}
+.block-type2[channel-id-2-meq-min-height~="71px"] .desc {
+  background: yellow;
+}
+
+.block-type2[channel-id-2-meq-min-height~="61px"][channel-id-2-meq-max-height~="70px"] {
+  background: green;
+}
+
+.block-type2[channel-id-2-meq-max-height~="60px"] {
+  font-size: 12px;
 }
 ```
-
-As you can see we use the `~=` [attribute selector](https://developer.mozilla.org/en-US/docs/Web/CSS/Attribute_selectors).
-Since this css-element-queries polyfill adds new element attributes on the DOM element
-(`<div class="widget-name" min-width="400px 700px"></div>`) depending on your actual CSS,
-you should always use this attribute selector (especially if you have several element query rules on the same element).
-
-```html
-<div class="widget-name">
-   <h2>Element responsiveness FTW!</h2>
-</div>
-```
-
-### Responsive image
-
-```html
-    <div data-responsive-image>
-        <img data-src="http://placehold.it/350x150"/>
-        <img min-width="350" data-src="http://placehold.it/700x300"/>
-        <img min-width="700" data-src="http://placehold.it/1400x600"/>
-    </div>
-```
-
-Include the javascript files at the bottom and you're good to go. No custom javascript calls needed.
-
-```html
-<script src="src/ResizeSensor.js"></script>
-<script src="src/ElementQueries.js"></script>
-```
-
-## See it in action:
-
-Here live http://marcj.github.io/css-element-queries/.
-
-![Demo](http://marcj.github.io/css-element-queries/images/css-element-queries-demo.gif)
-
-
-## Module Loader
-
-If you're using a module loader you need to trigger the event listening or initialization yourself:
 
 ```javascript
-var EQ = require('node_modules/css-element-queries/ElementQueries');
+const meq = require('manual-element-queries')
+meq.init()
 
- //attaches to DOMLoadContent
-EQ.listen();
+const type1 = toArray(document.querySelectorAll('.block-type1'))
+const type2 = toArray(document.querySelectorAll('.block-type2'))
 
-//or if you want to trigger it yourself.
-// Parse all available CSS and attach ResizeSensor to those elements which have rules attached
-// (make sure this is called after 'load' event, because CSS files are not ready when domReady is fired.
-EQ.init();
+setInterval(() => {
+  type1.forEach(span => {
+    span.style.width = random(70, 230) + 'px'
+    span.style.height = random(50, 80) + 'px'
+  })
+  meq.recalc('channel-id-1')
+}, 1e3)
+
+setInterval(() => {
+  type2.forEach(span => {
+    span.style.width = random(70, 230) + 'px'
+    span.style.height = random(50, 80) + 'px'
+  })
+  meq.recalc('channel-id-2')
+}, 3e3)
+
+function toArray(arrLike) {
+  return Array.prototype.slice.call(arrLike)
+}
+
+function random(lower, upper) {
+  return lower + Math.floor(Math.random() * (upper - lower + 1))
+}
 ```
-
-## Issues
-
- - So far does not work on `img` and other elements that can't contain other elements. Wrapping with a `div` works fine though (See demo).
- - Adds additional hidden elements into selected target element and forces target element to be relative or absolute.
- - Local stylesheets do not work (using `file://` protocol).
-
-## License
-
-MIT license. Copyright [Marc J. Schmidt](https://twitter.com/MarcJSchmidt).
