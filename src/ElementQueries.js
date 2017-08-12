@@ -21,10 +21,6 @@
      * @constructor
      */
     var ElementQueries = function() {
-
-        var trackingActive = false;
-        var elements = [];
-
         /**
          *
          * @param element
@@ -161,10 +157,6 @@
                 // });
             }
             element.elementQueriesSetupInformation.call();
-
-            if (trackingActive && elements.indexOf(element) < 0) {
-                elements.push(element);
-            }
         }
 
         /**
@@ -270,13 +262,8 @@
 
         /**
          * Searches all css rules and setups the event listener to all elements with element query rules..
-         *
-         * @param {Boolean} withTracking allows and requires you to use detach, since we store internally all used elements
-         *                               (no garbage collection possible if you don not call .detach() first)
          */
-        this.init = function(withTracking) {
-            trackingActive = typeof withTracking === 'undefined' ? false : withTracking;
-
+        this.init = function() {
             for (var i = 0, j = document.styleSheets.length; i < j; i++) {
                 try {
                     readRules(document.styleSheets[i].cssRules || document.styleSheets[i].rules || document.styleSheets[i].cssText);
@@ -290,69 +277,21 @@
             findElementQueriesElements();
         };
 
-        /**
-         *
-         * @param {Boolean} withTracking allows and requires you to use detach, since we store internally all used elements
-         *                               (no garbage collection possible if you don not call .detach() first)
-         */
-        this.update = function(withTracking) {
-            this.init(withTracking);
-        };
-
-        this.detach = function() {
-            if (!trackingActive) {
-                throw 'withTracking is not enabled. We can not detach elements since we don not store it.' +
-                'Use ElementQueries.withTracking = true; before domready or call ElementQueryes.update(true).';
-            }
-
-            var element;
-            while (element = elements.pop()) {
-                ElementQueries.detach(element);
-            }
-
-            elements = [];
+        this.update = function() {
+            this.init();
         };
     };
 
-    /**
-     *
-     * @param {Boolean} withTracking allows and requires you to use detach, since we store internally all used elements
-     *                               (no garbage collection possible if you don not call .detach() first)
-     */
-    ElementQueries.update = function(withTracking) {
-        ElementQueries.instance.update(withTracking);
+    ElementQueries.update = function() {
+        ElementQueries.instance.update();
     };
-
-    /**
-     * Removes all sensor and elementquery information from the element.
-     *
-     * @param {HTMLElement} element
-     */
-    ElementQueries.detach = function(element) {
-        if (element.elementQueriesSetupInformation) {
-            //element queries
-            element.elementQueriesSensor.detach();
-            delete element.elementQueriesSetupInformation;
-            delete element.elementQueriesSensor;
-
-        } else if (element.resizeSensor) {
-            //responsive image
-
-            element.resizeSensor.detach();
-            delete element.resizeSensor;
-        } else {
-            //console.log('detached already', element);
-        }
-    };
-
-    ElementQueries.withTracking = false;
 
     ElementQueries.init = function() {
         if (!ElementQueries.instance) {
             ElementQueries.instance = new ElementQueries();
         }
 
-        ElementQueries.instance.init(ElementQueries.withTracking);
+        ElementQueries.instance.init();
     };
 
     var domLoaded = function (callback) {
