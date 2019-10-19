@@ -6,8 +6,6 @@ It can be useful when you already have 1000+ elements and don't want to have an 
 
 ## Example
 
-[Live Demo](https://jsfiddle.net/pcoo54e5/31/)
-
 ```html
 <!DOCTYPE html>
 <html>
