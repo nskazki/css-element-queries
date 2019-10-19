@@ -1,7 +1,7 @@
 {
   "name": "manual-element-queries",
   "description": "Like css-element-queries but require manual recalculation trigger",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "license": "MIT",
   "main": "dist/ElementQueries.js",
   "author": "nskazki@gmail.com",
